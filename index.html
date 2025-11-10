@@ -1,0 +1,1227 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>员工流动分析工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #3498db, #2ecc71, #e74c3c);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+        }
+        
+        .upload-section {
+            background-color: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        
+        .upload-section:hover {
+            border-color: #3498db;
+            background-color: #f0f7ff;
+            transform: translateY(-2px);
+        }
+        
+        .upload-section.dragover {
+            border-color: #3498db;
+            background-color: #e3f2fd;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .input-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .input-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input, select, button {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        
+        .generate-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+        }
+        
+        .generate-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .instructions {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2e7d32;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 15px;
+            color: #2e7d32;
+            display: flex;
+            align-items: center;
+        }
+        
+        .instructions h3::before {
+            content: '💡';
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .instructions li::marker {
+            color: #2e7d32;
+        }
+        
+        .results-section {
+            margin-top: 40px;
+            display: none;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-bottom: 30px;
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+        }
+        
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stat-card.join {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        .stat-card.leave {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .stat-card.net {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .stat-card.total {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+        
+        .stat-card h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .loader {
+            display: none;
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        
+        .date-range {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+        
+        .events-table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+            display: none;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .events-table th, .events-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .events-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            position: sticky;
+            top: 0;
+        }
+        
+        .events-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .status-cell {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .status-present {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .status-leave {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .events-title {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .export-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+        }
+        
+        .export-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .input-section {
+                flex-direction: column;
+            }
+            
+            .upload-section {
+                padding: 30px 15px;
+            }
+            
+            .chart-container {
+                height: 400px;
+            }
+            
+            .chart-legend {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        
+        .tooltip-custom {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>员工流动分析工具</h1>
+            <p class="description">上传员工信息Excel文件，输入统计日期，查看关键事件节点的人员流动情况</p>
+        </header>
+        
+        <div class="instructions">
+            <h3>使用说明</h3>
+            <ul>
+                <li>Excel文件需包含以下列：<strong>姓名、蓝咭号码、入职日期、离职日期、职位</strong></li>
+                <li>日期格式应为标准日期格式（如：2023-01-15）</li>
+                <li>离职日期可为空（表示员工仍在职）</li>
+                <li>系统将分析从统计开始日期后180天内的关键事件节点</li>
+                <li><strong>点击图表节点可查看该日期的人员详情</strong></li>
+                <li><strong>鼠标悬停可查看该节点的入职和离职人数</strong></li>
+                <li><strong>注意：所有数据处理均在您的浏览器中完成，不会上传到任何服务器</strong></li>
+            </ul>
+        </div>
+        
+        <div class="upload-section" id="dropArea">
+            <input type="file" id="fileInput" class="file-input" accept=".xlsx, .xls">
+            <label for="fileInput" class="upload-btn">选择Excel文件</label>
+            <p>或直接将文件拖拽到此处</p>
+            <div class="file-info" id="fileInfo">未选择文件</div>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="startDate">统计开始日期</label>
+                <input type="date" id="startDate">
+            </div>
+        </div>
+        
+        <button id="generateBtn" class="generate-btn" disabled>开始分析</button>
+        
+        <div class="loader" id="loader"></div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="results-section" id="resultsSection">
+            <h2>分析结果</h2>
+            
+            <div class="date-range" id="dateRange"></div>
+            
+            <div class="stats-summary" id="statsSummary">
+                <!-- 统计摘要将在这里动态生成 -->
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="positionFilter">筛选职位</label>
+                    <select id="positionFilter">
+                        <option value="all">所有职位</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #3498db;"></div>
+                    <span>在职人数</span>
+                </div>
+            </div>
+            
+            <h3 id="chartTitle">人员流动柱状图</h3>
+            <div class="chart-container">
+                <canvas id="employeeChart"></canvas>
+            </div>
+            
+            <h3 class="events-title" id="eventsTitle">人员列表</h3>
+            <div class="events-table-container" id="eventsTableContainer">
+                <table class="events-table">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>蓝咭号码</th>
+                            <th>职位</th>
+                            <th>入职日期</th>
+                            <th>离职日期</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTableBody">
+                        <!-- 事件节点人员列表将在这里动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="export-section">
+                <button id="exportBtn" class="export-btn" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    导出Excel
+                </button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>员工流动分析工具 &copy; 2023 - 纯静态网页应用，无需服务器支持</p>
+        </div>
+    </div>
+
+    <!-- 自定义悬浮提示框 -->
+    <div class="tooltip-custom" id="customTooltip"></div>
+
+    <script>
+        // 全局变量
+        let employeeData = [];
+        let startDate = null;
+        let endDate = null;
+        let employeeChart = null;
+        let currentEventsData = []; // 存储当前显示的事件节点人员数据
+        let currentExportTitle = ""; // 存储当前导出的标题
+        
+        // DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const dropArea = document.getElementById('dropArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const startDateInput = document.getElementById('startDate');
+        const generateBtn = document.getElementById('generateBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const statsSummary = document.getElementById('statsSummary');
+        const positionFilter = document.getElementById('positionFilter');
+        const dateRange = document.getElementById('dateRange');
+        const eventsTableContainer = document.getElementById('eventsTableContainer');
+        const eventsTableBody = document.getElementById('eventsTableBody');
+        const eventsTitle = document.getElementById('eventsTitle');
+        const errorMessage = document.getElementById('errorMessage');
+        const loader = document.getElementById('loader');
+        const customTooltip = document.getElementById('customTooltip');
+        const chartTitle = document.getElementById('chartTitle');
+        
+        // 设置默认统计日期为今天
+        const today = new Date();
+        startDateInput.value = today.toISOString().split('T')[0];
+        
+        // 事件监听
+        fileInput.addEventListener('change', handleFileSelect);
+        generateBtn.addEventListener('click', generateReport);
+        startDateInput.addEventListener('change', validateInputs);
+        positionFilter.addEventListener('change', updateCharts);
+        exportBtn.addEventListener('click', exportToExcel);
+        
+        // 拖放功能
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('dragover');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('dragover');
+        }
+        
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        }
+        
+        // 处理文件选择
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            fileInfo.textContent = `已选择: ${file.name}`;
+            errorMessage.style.display = 'none';
+            
+            // 启用生成按钮如果日期已设置
+            validateInputs();
+        }
+        
+        // 验证输入
+        function validateInputs() {
+            if (fileInput.files.length > 0 && startDateInput.value) {
+                generateBtn.disabled = false;
+            } else {
+                generateBtn.disabled = true;
+            }
+        }
+        
+        // 生成报告
+        function generateReport() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            startDate = new Date(startDateInput.value);
+            
+            if (isNaN(startDate.getTime())) {
+                showError('统计日期无效，请选择有效日期');
+                return;
+            }
+            
+            // 计算结束日期（开始日期后180天）
+            endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + 180);
+            
+            loader.style.display = 'block';
+            errorMessage.style.display = 'none';
+            
+            // 使用setTimeout确保加载动画显示
+            setTimeout(() => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        
+                        // 获取第一个工作表
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // 转换为JSON
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                        
+                        if (jsonData.length < 1) {
+                            throw new Error('Excel文件中没有数据');
+                        }
+                        
+                        // 处理数据
+                        processData(jsonData);
+                        
+                    } catch (error) {
+                        showError(`文件解析错误: ${error.message}`);
+                        loader.style.display = 'none';
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showError('文件读取失败，请重试');
+                    loader.style.display = 'none';
+                };
+                
+                reader.readAsArrayBuffer(file);
+            }, 100);
+        }
+        
+        // 处理数据
+        function processData(rawData) {
+            employeeData = [];
+            let positions = [];
+            
+            // 验证数据格式
+            const requiredFields = ['姓名', '蓝咭号码', '入职日期', '离职日期', '职位'];
+            const firstRow = rawData[0];
+            
+            for (let field of requiredFields) {
+                if (!(field in firstRow)) {
+                    showError(`数据格式错误：缺少"${field}"列`);
+                    loader.style.display = 'none';
+                    return;
+                }
+            }
+            
+            // 提取员工数据
+            rawData.forEach(row => {
+                const employee = {
+                    name: row['姓名'],
+                    cardNumber: row['蓝咭号码'],
+                    joinDate: parseDate(row['入职日期']),
+                    leaveDate: row['离职日期'] ? parseDate(row['离职日期']) : null,
+                    position: row['职位'] || '未指定'
+                };
+                
+                employeeData.push(employee);
+                
+                // 收集职位列表
+                if (!positions.includes(employee.position)) {
+                    positions.push(employee.position);
+                }
+            });
+            
+            // 更新职位筛选器
+            updatePositionFilter(positions);
+            
+            // 更新日期范围显示
+            updateDateRange();
+            
+            // 生成报告
+            generateEmployeeChart();
+            generateStatsSummary();
+            
+            // 显示结果区域
+            resultsSection.style.display = 'block';
+            loader.style.display = 'none';
+        }
+        
+        // 解析日期
+        function parseDate(dateValue) {
+            if (dateValue instanceof Date) {
+                return dateValue;
+            }
+            
+            // 处理Excel日期序列号
+            if (typeof dateValue === 'number') {
+                return new Date(Math.round((dateValue - 25569) * 86400 * 1000));
+            }
+            
+            // 处理字符串日期
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) {
+                throw new Error(`日期格式无效: ${dateValue}`);
+            }
+            
+            return date;
+        }
+        
+        // 格式化日期为 MM-DD
+        function formatDateShort(date) {
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${month}-${day}`;
+        }
+        
+        // 格式化日期为 YYYY-MM-DD
+        function formatDateFull(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // 更新职位筛选器
+        function updatePositionFilter(positions) {
+            positionFilter.innerHTML = '<option value="all">所有职位</option>';
+            
+            positions.forEach(position => {
+                const option = document.createElement('option');
+                option.value = position;
+                option.textContent = position;
+                positionFilter.appendChild(option);
+            });
+        }
+        
+        // 更新日期范围显示
+        function updateDateRange() {
+            const startFormatted = formatDateFull(startDate);
+            const endFormatted = formatDateFull(endDate);
+            dateRange.textContent = `统计期间: ${startFormatted} 至 ${endFormatted}`;
+        }
+        
+        // 生成员工柱状图
+        function generateEmployeeChart() {
+            const ctx = document.getElementById('employeeChart').getContext('2d');
+            
+            // 销毁现有图表
+            if (employeeChart) {
+                employeeChart.destroy();
+            }
+            
+            // 获取筛选的职位
+            const selectedPosition = positionFilter.value;
+            
+            // 收集所有关键事件日期
+            const eventDates = new Set();
+            eventDates.add(startDate);
+            eventDates.add(endDate);
+            
+            employeeData.forEach(employee => {
+                if (selectedPosition !== 'all' && employee.position !== selectedPosition) {
+                    return;
+                }
+                
+                // 添加入职日期
+                if (employee.joinDate >= startDate && employee.joinDate <= endDate) {
+                    eventDates.add(employee.joinDate);
+                }
+                
+                // 添加离职日期
+                if (employee.leaveDate && employee.leaveDate >= startDate && employee.leaveDate <= endDate) {
+                    eventDates.add(employee.leaveDate);
+                }
+            });
+            
+            // 排序日期
+            const sortedDates = Array.from(eventDates).sort((a, b) => a - b);
+            
+            // 计算每个日期的人员构成
+            const presentData = []; // 在职人数
+            const joinData = [];    // 入职人数
+            const leaveData = [];   // 离职人数
+            const employeesAtDate = []; // 存储每个日期在职的员工信息
+            
+            sortedDates.forEach(date => {
+                let presentCount = 0;
+                let joinCount = 0;
+                let leaveCount = 0;
+                const employees = [];
+                
+                employeeData.forEach(employee => {
+                    if (selectedPosition !== 'all' && employee.position !== selectedPosition) {
+                        return;
+                    }
+                    
+                    // 判断员工在该日期是否在职
+                    if (employee.joinDate <= date && 
+                        (!employee.leaveDate || employee.leaveDate >= date)) {
+                        presentCount++;
+                        employees.push(employee);
+                    }
+                    
+                    // 判断员工是否在该日期入职
+                    if (employee.joinDate.getTime() === date.getTime()) {
+                        joinCount++;
+                    }
+                    
+                    // 判断员工是否在该日期离职
+                    if (employee.leaveDate && employee.leaveDate.getTime() === date.getTime()) {
+                        leaveCount++;
+                    }
+                });
+                
+                presentData.push(presentCount);
+                joinData.push(joinCount);
+                leaveData.push(leaveCount);
+                employeesAtDate.push(employees);
+            });
+            
+            // 更新图表标题 - 只显示"人员流动柱状图"
+            chartTitle.textContent = "人员流动柱状图";
+            
+            // 创建图表数据
+            const chartData = {
+                labels: sortedDates.map(d => formatDateShort(d)),
+                datasets: [
+                    {
+                        label: '在职人数',
+                        data: presentData,
+                        backgroundColor: '#3498db',
+                        borderColor: '#2980b9',
+                        borderWidth: 1
+                    }
+                ]
+            };
+            
+            // 创建图表
+            employeeChart = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false, // 使用自定义图例
+                        },
+                        title: {
+                            display: true,
+                            text: '人员流动柱状图',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            enabled: false, // 禁用默认tooltip
+                            external: function(context) {
+                                // 获取鼠标位置
+                                const chart = context.chart;
+                                const {chartArea} = chart;
+                                
+                                // 获取鼠标位置
+                                const position = chart.canvas.getBoundingClientRect();
+                                const x = context.tooltip.x;
+                                const y = context.tooltip.y;
+                                
+                                // 获取数据索引
+                                const index = context.tooltip.dataPoints?.[0]?.dataIndex;
+                                
+                                if (index !== undefined) {
+                                    // 显示自定义tooltip
+                                    customTooltip.style.display = 'block';
+                                    customTooltip.style.left = (position.left + x) + 'px';
+                                    customTooltip.style.top = (position.top + y - 80) + 'px';
+                                    
+                                    const date = sortedDates[index];
+                                    const present = presentData[index];
+                                    const join = joinData[index];
+                                    const leave = leaveData[index];
+                                    
+                                    customTooltip.innerHTML = `
+                                        <div><strong>${formatDateFull(date)}</strong></div>
+                                        <div>在职人数: ${present}人</div>
+                                        <div>入职人数: ${join}人</div>
+                                        <div>离职人数: ${leave}人</div>
+                                    `;
+                                } else {
+                                    customTooltip.style.display = 'none';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '事件日期'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '在职人数'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    onHover: function(event, elements) {
+                        // 鼠标离开时隐藏tooltip
+                        if (elements.length === 0) {
+                            customTooltip.style.display = 'none';
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const elementIndex = elements[0].index;
+                            const pointData = {
+                                date: sortedDates[elementIndex],
+                                employees: employeesAtDate[elementIndex]
+                            };
+                            updateEventsTable(pointData, formatDateFull(pointData.date));
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 更新事件节点人员列表
+        function updateEventsTable(pointData, dateStr) {
+            // 清空当前数据
+            currentEventsData = [];
+            
+            // 更新表格标题
+            const titleText = `${dateStr} 在职人员列表 (共${pointData.employees.length}人)`;
+            eventsTitle.textContent = titleText;
+            eventsTitle.style.display = 'block';
+            
+            // 保存导出标题
+            currentExportTitle = titleText;
+            
+            // 清空表格内容
+            eventsTableBody.innerHTML = '';
+            
+            if (pointData.employees.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="6" style="text-align: center; color: #999;">该日期没有在职人员</td>`;
+                eventsTableBody.appendChild(row);
+            } else {
+                // 填充表格
+                pointData.employees.forEach(employee => {
+                    const row = document.createElement('tr');
+                    
+                    // 确定员工状态：有离职日期且离职日期 < 当前节点日期即为离职（红色），否则为在职（绿色）
+                    const isLeave = employee.leaveDate && employee.leaveDate < pointData.date;
+                    const status = isLeave ? '离职' : '在职';
+                    const statusClass = isLeave ? 'status-leave' : 'status-present';
+                    
+                    row.innerHTML = `
+                        <td>${employee.name}</td>
+                        <td>${employee.cardNumber}</td>
+                        <td>${employee.position}</td>
+                        <td>${formatDateFull(employee.joinDate)}</td>
+                        <td>${employee.leaveDate ? formatDateFull(employee.leaveDate) : '-'}</td>
+                        <td><span class="status-cell ${statusClass}">${status}</span></td>
+                    `;
+                    eventsTableBody.appendChild(row);
+                    
+                    // 保存数据用于导出
+                    currentEventsData.push({
+                        姓名: employee.name,
+                        蓝咭号码: employee.cardNumber,
+                        职位: employee.position,
+                        入职日期: formatDateFull(employee.joinDate),
+                        离职日期: employee.leaveDate ? formatDateFull(employee.leaveDate) : '',
+                        状态: status
+                    });
+                });
+            }
+            
+            // 显示表格
+            eventsTableContainer.style.display = 'block';
+            
+            // 启用导出按钮
+            exportBtn.disabled = false;
+        }
+        
+        // 导出到Excel
+        function exportToExcel() {
+            if (currentEventsData.length === 0) {
+                showError('没有数据可导出');
+                return;
+            }
+            
+            try {
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 创建工作表数据，包含标题
+                const wsData = [
+                    [currentExportTitle], // 第一行是标题
+                    [], // 空行
+                    ['姓名', '蓝咭号码', '职位', '入职日期', '离职日期', '状态'] // 表头
+                ];
+                
+                // 添加数据行
+                currentEventsData.forEach(row => {
+                    wsData.push([
+                        row.姓名,
+                        row.蓝咭号码,
+                        row.职位,
+                        row.入职日期,
+                        row.离职日期,
+                        row.状态
+                    ]);
+                });
+                
+                // 创建工作表
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 合并标题行
+                if (!ws['!merges']) ws['!merges'] = [];
+                ws['!merges'].push({s: {r: 0, c: 0}, e: {r: 0, c: 5}});
+                
+                // 设置标题样式
+                if (!ws['A1'].s) ws['A1'].s = {};
+                ws['A1'].s = {
+                    font: {bold: true, sz: 14},
+                    alignment: {horizontal: 'center'}
+                };
+                
+                // 将工作表添加到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '人员列表');
+                
+                // 生成Excel文件并下载
+                const wbout = XLSX.write(wb, {bookType:'xlsx', type:'binary'});
+                
+                function s2ab(s) {
+                    const buf = new ArrayBuffer(s.length);
+                    const view = new Uint8Array(buf);
+                    for (let i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                    return buf;
+                }
+                
+                // 获取当前日期用于文件名
+                const currentDate = formatDateFull(new Date());
+                const fileName = `员工列表_${currentDate}.xlsx`;
+                
+                // 保存文件
+                saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), fileName);
+                
+            } catch (error) {
+                showError(`导出失败: ${error.message}`);
+            }
+        }
+        
+        // 生成统计摘要
+        function generateStatsSummary() {
+            // 获取筛选的职位
+            const selectedPosition = positionFilter.value;
+            
+            // 筛选员工数据
+            const filteredEmployees = selectedPosition === 'all' 
+                ? employeeData 
+                : employeeData.filter(emp => emp.position === selectedPosition);
+            
+            // 计算入职人数
+            const joinCount = filteredEmployees.filter(employee => 
+                employee.joinDate >= startDate && employee.joinDate <= endDate
+            ).length;
+            
+            // 计算离职人数
+            const leaveCount = filteredEmployees.filter(employee => 
+                employee.leaveDate && employee.leaveDate >= startDate && employee.leaveDate <= endDate
+            ).length;
+            
+            // 计算净流动
+            const netFlow = joinCount - leaveCount;
+            
+            // 计算统计结束时的在职人数
+            const endCount = filteredEmployees.filter(employee => 
+                employee.joinDate <= endDate && 
+                (!employee.leaveDate || employee.leaveDate > endDate)
+            ).length;
+            
+            statsSummary.innerHTML = `
+                <div class="stat-card join">
+                    <h3>期间入职</h3>
+                    <div class="value">${joinCount}</div>
+                </div>
+                <div class="stat-card leave">
+                    <h3>期间离职</h3>
+                    <div class="value">${leaveCount}</div>
+                </div>
+                <div class="stat-card net">
+                    <h3>净流动</h3>
+                    <div class="value">${netFlow >= 0 ? '+' : ''}${netFlow}</div>
+                </div>
+                <div class="stat-card total">
+                    <h3>期末在职</h3>
+                    <div class="value">${endCount}</div>
+                </div>
+            `;
+        }
+        
+        // 更新图表
+        function updateCharts() {
+            generateEmployeeChart();
+            generateStatsSummary();
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
